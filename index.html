@@ -170,7 +170,7 @@ label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,selec
   function setVal(id,v){if(v!==undefined&&v!==null&&v!=='')$(id).value=v}
   async function loadPdfJs(){
     if(window.pdfjsLib)return window.pdfjsLib;
-    if(!pdfjsPromise){pdfjsPromise=import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs').then(m=>{window.pdfjsLib=m;return m}).catch(e=>{pdfjsPromise=null;throw e})}
+    if(!pdfjsPromise){pdfjsPromise=import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs').then(m=>{window.pdfjsLib=m;if(m.GlobalWorkerOptions)m.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';return m}).catch(e=>{pdfjsPromise=null;throw e})}
     return pdfjsPromise;
   }
   function normalizeText(s){return String(s||'').replace(/\u00a0/g,' ').replace(/[ ]{2,}/g,' ').trim()}
@@ -195,7 +195,7 @@ label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,selec
   }
   async function readPdf(file){
     const status=$('parseStatus');status.textContent='Loading PDF reader…';
-    const pdfjs=await loadPdfJs();const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf}).promise;let text='';
+    const pdfjs=await loadPdfJs();const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf,useWorkerFetch:true,isEvalSupported:true}).promise;let text='';
     for(let p=1;p<=pdf.numPages;p++){
       const page=await pdf.getPage(p);const content=await page.getTextContent();
       const items=content.items.map(i=>({str:i.str||'',x:(i.transform&&i.transform[4])||0,y:(i.transform&&i.transform[5])||0})).filter(i=>i.str.trim());
@@ -221,7 +221,7 @@ label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,selec
   ['regFY','regMonth','regSearch'].forEach(id=>$(id).addEventListener('input',updateRegister));
   $('clearDash').addEventListener('click',()=>{$('dashFY').value='';$('dashMonth').value='';$('dashSearch').value='';updateDashboard()});
   $('cancelEdit').addEventListener('click',()=>{resetForm();showPage('dashboard')});
-  $('pdfFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const d=await readPdf(file);populateFromParsed(d);$('parseStatus').textContent='EPFO fields read. Please review the values before saving.';toast('PDF details loaded. Please verify before saving.')}catch(err){console.error(err);$('parseStatus').textContent='Could not read this PDF automatically. You can enter the fields manually.';toast('PDF reader could not load. Manual entry is still available.')}});
+  $('pdfFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const d=await readPdf(file);populateFromParsed(d);$('parseStatus').textContent='EPFO fields read. Please review the values before saving.';toast('PDF details loaded. Please verify before saving.')}catch(err){console.error(err);$('parseStatus').textContent='Could not read this PDF automatically. Check your internet connection and try again. You can enter the fields manually.';toast('PDF reader could not load. Manual entry is still available.')}});
   $('challanForm').addEventListener('submit',async e=>{e.preventDefault();const r={id:editingId||String(Date.now()),fy:$('fy').value,month:$('month').value,wageMonth:$('wageMonth').value.trim(),trrn:$('trrn').value.trim(),estCode:$('estCode').value.trim(),challanDate:$('challanDate').value,subscribers:parseNumber($('subscribers').value),employeeShare:parseNumber($('employeeShare').value),employerShare:parseNumber($('employerShare').value),ac01:parseNumber($('ac01').value),ac10:parseNumber($('ac10').value),ac21:parseNumber($('ac21').value),ac02:parseNumber($('ac02').value),ac22:parseNumber($('ac22').value),grandTotal:parseNumber($('grandTotal').value),notes:$('notes').value.trim()};if(!r.ac01)r.ac01=r.employeeShare+r.employerShare;if(!r.grandTotal)r.grandTotal=r.ac01+r.ac10+r.ac21+r.ac02+r.ac22;const old=records.findIndex(x=>x.id===r.id);if(old>=0)records[old]=r;else records.push(r);saveRecords();resetForm();populateFilters();showPage('dashboard');toast(old>=0?'Challan updated':'Challan saved')});
   $('regTable').addEventListener('click',e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const r=records.find(x=>x.id===edit.dataset.edit);if(r)fillForm(r)}if(del){const r=records.find(x=>x.id===del.dataset.delete);if(r&&confirm('Delete this challan record?')){records=records.filter(x=>x.id!==r.id);saveRecords();populateFilters();updateRegister();updateDashboard();toast('Record deleted')}}});
   function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
