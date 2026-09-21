@@ -1,45 +1,239 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EPF Challan Register V3</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
-<style>*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#f4f6f8;color:#172033}header{background:#17365d;color:#fff;padding:18px 24px}header h1{margin:0;font-size:24px}nav{background:#fff;padding:12px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}button{border:0;border-radius:6px;padding:9px 14px;background:#17365d;color:#fff;cursor:pointer}.light{background:#e8edf3;color:#17365d}.red{background:#b42318}.hidden{display:none}main{max-width:1250px;margin:auto;padding:20px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card,.panel{background:#fff;border-radius:9px;padding:18px;box-shadow:0 1px 6px #0001}.num{font-size:25px;font-weight:bold;margin-top:8px}.panel{margin-top:18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}label{font-size:13px;font-weight:bold}input,select,textarea{width:100%;padding:9px;margin-top:5px;border:1px solid #bbb;border-radius:5px}textarea{min-height:70px}table{width:100%;border-collapse:collapse;margin-top:15px;font-size:13px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}th{background:#eef2f6}.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.toolbar>div{min-width:180px}.notice{padding:10px;background:#eef6ff;border-left:4px solid #3578b8;margin:12px 0}.warning{padding:10px;background:#fff4d6;border-left:4px solid #c48a00;margin:12px 0}.success{padding:10px;background:#eaf7ee;border-left:4px solid #2e7d32;margin:12px 0}.small{font-size:12px;color:#5d6878}.chartbox{height:390px;position:relative}#login{max-width:420px;margin:70px auto}@media(max-width:800px){.cards,.grid{grid-template-columns:1fr 1fr}}@media(max-width:550px){.cards,.grid{grid-template-columns:1fr}.chartbox{height:300px}}@media print{nav,#login,.no-print{display:none!important}body{background:white}.panel,.card{box-shadow:none;border:1px solid #ddd}.chartbox{height:450px}}
-</style></head><body>
-<div id="login" class="panel"><h2>EPF Challan Register</h2><p>Version 3</p><label>Username</label><input id="user" value="admin"><label>Password</label><input id="pass" type="password" value="admin123"><br><br><button onclick="login()">Login</button><div class="warning">Demo login: admin / admin123. Secure authentication should replace this before production use.</div></div>
-<div id="app" class="hidden"><header><h1>EPF Challan Register</h1><div>HR / EPF Management</div></header><nav class="no-print"><button onclick="page('dash')">Dashboard</button><button onclick="page('add')">+ Add Challan</button><button onclick="page('register')">Register</button><button onclick="page('charts')">Charts & Reports</button><button class="light" onclick="exportCSV()">Export Excel/CSV</button><button class="light" onclick="backup()">Backup</button><button class="light" onclick="document.getElementById('restore').click()">Restore</button><input id="restore" type="file" accept=".json" hidden onchange="restore(event)"><button class="red" onclick="logout()">Logout</button></nav>
-<main>
-<section id="dash"><div class="panel no-print"><h2>Dashboard Filters</h2><div class="toolbar"><div><label>Financial Year</label><select id="dashFY" onchange="update()"></select></div><div><label>Month</label><select id="dashMonth" onchange="update()"></select></div><div><button class="light" onclick="clearDashFilters()">Clear</button></div></div></div><div class="cards"><div class="card">Challans<div class="num" id="n">0</div></div><div class="card">UAN / Employee Count<div class="num" id="uans">0</div></div><div class="card">Total Amount<div class="num" id="amt">₹0</div></div><div class="card">Sites<div class="num" id="sites">0</div></div></div><div class="panel"><h2>Recent Challans</h2><div id="recent">No records.</div></div></section>
-<section id="add" class="hidden"><div class="panel"><h2 id="title">Add EPF Challan</h2><div class="notice">Select challan year/month and upload the EPF PDF. The app will try to extract TRRN, establishment code, wage month, member/UAN count, EPF, EPS, EDLI, admin charges and total. Always verify before saving.</div><div class="grid"><div><label>Challan Year</label><select id="addYear"></select></div><div><label>Challan Month</label><select id="addMonth"></select></div><div><label>Site / Location</label><input id="site"></div></div><br><label>Upload EPF Challan PDF</label><input id="pdf" type="file" accept=".pdf"><div id="parseStatus" class="small"></div><form id="form"><input type="hidden" id="id"><div class="grid"><div><label>Financial Year</label><input id="fy" required></div><div><label>Month</label><input id="month" type="month" required></div><div><label>Establishment Code</label><input id="est"></div><div><label>TRRN / Challan Number</label><input id="challan" required></div><div><label>Challan Date</label><input id="date" type="date"></div><div><label>Employee / UAN Count</label><input id="employees" type="number" min="0"></div><div><label>EPF Amount</label><input id="epf" type="number" step="0.01" value="0"></div><div><label>EPS Amount</label><input id="eps" type="number" step="0.01" value="0"></div><div><label>EDLI Amount</label><input id="edli" type="number" step="0.01" value="0"></div><div><label>Admin Charges</label><input id="admin" type="number" step="0.01" value="0"></div><div><label>Total Amount</label><input id="total" type="number" step="0.01" value="0"></div><div style="grid-column:1/-1"><label>Remarks</label><textarea id="remarks"></textarea></div></div><br><button>Save Challan</button> <button type="button" class="light" onclick="clearForm()">Clear</button></form></div></section>
-<section id="register" class="hidden"><div class="panel"><h2>Challan Register</h2><div class="grid no-print"><div><label>Search</label><input id="q" oninput="render()"></div><div><label>Financial Year</label><select id="qfy" onchange="render()"></select></div><div><label>Month</label><select id="qmonth" onchange="render()"></select></div></div><div id="tbl"></div></div></section>
-<section id="charts" class="hidden"><div class="panel no-print"><h2>Charts & Reports</h2><div class="toolbar"><div><label>Report Type</label><select id="chartType" onchange="drawChart()"><option value="year">Yearly</option><option value="month">Monthly</option></select></div><div><label>Financial Year</label><select id="chartFY" onchange="drawChart()"></select></div><div><button onclick="window.print()">Print Report</button></div></div><p class="small">Yearly/monthly UAN or employee count and total amount.</p></div><div class="panel"><div class="chartbox"><canvas id="reportChart"></canvas></div></div><div class="panel" id="reportSummary"></div></section>
-</main></div>
-<script type="module">import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';window.pdfjsLib=pdfjsLib;</script>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EPF Challan Register</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#dbe2ea;--primary:#155eef;--primary2:#0b4fc4;--danger:#d92d20;--ok:#027a48;--shadow:0 8px 24px rgba(16,24,40,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#eef4ff,#f8fafc)}
+.login-card{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow)}
+.logo{width:48px;height:48px;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;margin-bottom:14px}.login-card h1{margin:0 0 6px}.login-card p{color:var(--muted);margin:0 0 20px}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,select{width:100%;border:1px solid #cfd7e2;border-radius:9px;padding:10px 11px;background:#fff;color:var(--ink)}input:focus,select:focus{outline:2px solid rgba(21,94,239,.15);border-color:var(--primary)}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700}.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary2)}.btn-light{background:#eef2f6;color:#263248}.btn-danger{background:#fee4e2;color:#b42318}.btn-ok{background:#dcfae6;color:#027a48}.btn-block{width:100%;margin-top:16px}.error{color:#b42318;font-size:13px;margin-top:10px}.hint{font-size:12px;color:var(--muted);margin-top:12px}
+.app{min-height:100vh}.topbar{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:5}.brand{font-weight:800;font-size:18px}.top-actions{display:flex;gap:8px;align-items:center}.layout{display:flex;min-height:calc(100vh - 64px)}.sidebar{width:220px;background:#111827;color:#d1d5db;padding:16px 12px}.nav-btn{width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:11px 12px;border-radius:8px;margin-bottom:5px;font-weight:700}.nav-btn:hover,.nav-btn.active{background:#243047;color:#fff}.main{flex:1;padding:20px;min-width:0}.page{display:none}.page.active{display:block}.page-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}.page-title h2{margin:0}.page-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.grid{display:grid;gap:14px}.cards{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(16,24,40,.03)}.metric-label{font-size:12px;color:var(--muted)}.metric{font-size:25px;font-weight:800;margin-top:6px}.filters{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}.table-wrap{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto}.table-actions{padding:12px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;min-width:1100px}th,td{border-bottom:1px solid #edf0f3;padding:10px 9px;text-align:left;font-size:13px;white-space:nowrap}th{background:#f8fafc;font-size:12px;color:#475467;position:sticky;top:0}td.num{text-align:right}.empty{text-align:center;padding:28px;color:var(--muted)}
+.form-card{max-width:1100px}.form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.full{grid-column:1/-1}.file-box{border:1px dashed #98a2b3;padding:14px;border-radius:10px;background:#fafcff}.parse-status{margin-top:8px;font-size:12px;color:var(--muted)}.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.chart-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.chart-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px}.bars{display:flex;align-items:flex-end;gap:10px;min-height:330px;padding:20px 10px 0;border-bottom:1px solid var(--line);overflow-x:auto}.bar-group{min-width:54px;display:flex;flex-direction:column;align-items:center;gap:7px;height:290px;justify-content:flex-end}.bar{width:32px;background:var(--primary);border-radius:5px 5px 0 0;min-height:2px}.bar-amount{font-size:10px;color:#475467;writing-mode:vertical-rl;transform:rotate(180deg);max-height:90px;overflow:hidden}.bar-label{font-size:11px;color:#475467;white-space:nowrap}.chart-note{font-size:12px;color:var(--muted);margin-top:10px}
+.toast{position:fixed;right:18px;bottom:18px;background:#101828;color:#fff;padding:12px 15px;border-radius:9px;display:none;z-index:20;max-width:360px}.toast.show{display:block}.print-only{display:none}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.filters,.form-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.sidebar{width:64px;padding:12px 8px}.nav-btn{font-size:0;text-align:center}.nav-btn::first-letter{font-size:18px}.main{padding:12px}.cards,.filters,.form-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.brand{font-size:15px}.top-actions .btn-light{display:none}.page-title{align-items:flex-start;flex-direction:column}.form-actions{justify-content:stretch;flex-direction:column}}
+@media print{.topbar,.sidebar,.no-print{display:none!important}.layout{display:block}.main{padding:0}.page{display:none!important}.page.active{display:block!important}.print-only{display:block}.table-wrap,.card,.chart-box{box-shadow:none}.bars{min-height:250px}}
+</style>
+</head>
+<body>
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="logo">EP</div>
+    <h1>EPF Challan Register</h1>
+    <p>Sign in to manage your EPF challan records.</p>
+    <form id="loginForm">
+      <label for="username">Username</label><input id="username" autocomplete="username" required>
+      <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>
+      <button class="btn btn-primary btn-block" type="submit">Login</button>
+      <div id="loginError" class="error"></div>
+    </form>
+    <div class="hint">Demo login: <b>admin</b> / <b>admin123</b></div>
+  </div>
+</div>
+
+<div id="appView" class="app hidden">
+  <header class="topbar">
+    <div class="brand">EPF Challan Register</div>
+    <div class="top-actions"><span id="userLabel" class="hint" style="margin:0">Admin</span><button class="btn btn-light" id="logoutBtn">Logout</button></div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="nav-btn active" data-page="dashboard">▣ &nbsp;Dashboard</button>
+      <button class="nav-btn" data-page="add">＋ &nbsp;Add Challan</button>
+      <button class="nav-btn" data-page="register">▤ &nbsp;Register</button>
+      <button class="nav-btn" data-page="charts">▥ &nbsp;Charts</button>
+      <button class="nav-btn" data-page="backup">⇅ &nbsp;Backup</button>
+    </aside>
+    <main class="main">
+      <section id="dashboard" class="page active">
+        <div class="page-title"><div><h2>Dashboard</h2><p>View challan totals by financial year and month.</p></div></div>
+        <div class="grid filters">
+          <div><label>Financial Year</label><select id="dashFY"></select></div>
+          <div><label>Month</label><select id="dashMonth"></select></div>
+          <div><label>Search</label><input id="dashSearch" placeholder="TRRN, establishment, site..."></div>
+          <div style="display:flex;align-items:end"><button class="btn btn-light" id="clearDash" style="width:100%">Clear filters</button></div>
+        </div>
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">Challans</div><div class="metric" id="mChallans">0</div></div>
+          <div class="card"><div class="metric-label">UAN / Subscribers</div><div class="metric" id="mUan">0</div></div>
+          <div class="card"><div class="metric-label">Total EPF Amount</div><div class="metric" id="mAmount">₹0</div></div>
+          <div class="card"><div class="metric-label">Latest Challan Date</div><div class="metric" id="mLatest">-</div></div>
+        </div>
+        <div class="table-wrap" style="margin-top:14px"><div class="table-actions"><b>Filtered Challans</b><span id="dashCount" class="hint" style="margin:0"></span></div><div class="table-scroll"><table id="dashTable"></table></div></div>
+      </section>
+
+      <section id="add" class="page">
+        <div class="page-title"><div><h2 id="formTitle">Add Challan</h2><p>Upload an EPFO challan PDF to read the official fields automatically.</p></div></div>
+        <div class="card form-card">
+          <form id="challanForm">
+            <div class="grid form-grid">
+              <div><label>Financial Year</label><select id="fy" required></select></div>
+              <div><label>Month</label><select id="month" required></select></div>
+              <div><label>Wage Month</label><input id="wageMonth" placeholder="AUG 2026"></div>
+              <div><label>TRRN</label><input id="trrn"></div>
+              <div><label>Establishment Code</label><input id="estCode"></div>
+              <div><label>Challan / Generated Date</label><input id="challanDate" type="date"></div>
+              <div><label>Total Subscribers / UAN Count</label><input id="subscribers" type="number" min="0"></div>
+              <div><label>A/C 01 – Employee Share</label><input id="employeeShare" type="number" min="0"></div>
+              <div><label>A/C 01 – Employer Share</label><input id="employerShare" type="number" min="0"></div>
+              <div><label>A/C 01 – Total</label><input id="ac01" type="number" min="0"></div>
+              <div><label>A/C 10 – EPS</label><input id="ac10" type="number" min="0"></div>
+              <div><label>A/C 21 – EDLI</label><input id="ac21" type="number" min="0"></div>
+              <div><label>A/C 02 – Admin</label><input id="ac02" type="number" min="0"></div>
+              <div><label>A/C 22</label><input id="ac22" type="number" min="0"></div>
+              <div><label>Grand Total</label><input id="grandTotal" type="number" min="0"></div>
+              <div class="full"><label>Upload EPFO Challan PDF</label><div class="file-box"><input id="pdfFile" type="file" accept="application/pdf"><div id="parseStatus" class="parse-status">PDF reading is loaded only when you select a file.</div></div></div>
+              <div class="full"><label>Notes</label><input id="notes" placeholder="Optional notes"></div>
+            </div>
+            <div class="form-actions"><button type="button" class="btn btn-light" id="cancelEdit">Cancel</button><button type="submit" class="btn btn-primary">Save Challan</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section id="register" class="page">
+        <div class="page-title"><div><h2>Challan Register</h2><p>Search, edit, delete and export your local register.</p></div></div>
+        <div class="table-wrap"><div class="table-actions"><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="regSearch" placeholder="Search register..." style="min-width:260px"><select id="regFY" style="width:150px"></select><select id="regMonth" style="width:150px"></select></div><div><button class="btn btn-light" id="exportCsv">Export CSV</button></div></div><div class="table-scroll"><table id="regTable"></table></div></div>
+      </section>
+
+      <section id="charts" class="page">
+        <div class="page-title"><div><h2>Charts</h2><p>Native charts without external chart libraries. Use yearly or monthly view and print.</p></div><button class="btn btn-light" id="printCharts">Print</button></div>
+        <div class="chart-controls"><select id="chartMode"><option value="yearly">Yearly</option><option value="monthly">Monthly</option></select><select id="chartFY" style="max-width:180px"></select></div>
+        <div class="chart-box"><h3 id="chartTitle" style="margin-top:0">Yearly Summary</h3><div id="bars" class="bars"></div><div class="chart-note">Each bar shows subscriber/UAN count by period. The amount is displayed above each bar.</div></div>
+      </section>
+
+      <section id="backup" class="page">
+        <div class="page-title"><div><h2>Backup & Restore</h2><p>Keep a copy of your browser-stored register.</p></div></div>
+        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <div class="card"><h3>Backup</h3><p class="hint">Download all challan records as a JSON file.</p><button class="btn btn-primary" id="backupBtn">Download Backup</button></div>
+          <div class="card"><h3>Restore</h3><p class="hint">Restore records from a JSON backup created by this app.</p><input id="restoreFile" type="file" accept="application/json"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
 <script>
-const KEY='epf_v3_records',months=['January','February','March','April','May','June','July','August','September','October','November','December'];let records=JSON.parse(localStorage.getItem(KEY)||'[]'),chart=null,$=id=>document.getElementById(id),money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-function login(){if($('user').value==='admin'&&$('pass').value==='admin123'){$('login').classList.add('hidden');$('app').classList.remove('hidden');populateFilters();update()}else alert('Invalid demo login')}function logout(){$('app').classList.add('hidden');$('login').classList.remove('hidden')}function page(p){['dash','add','register','charts'].forEach(x=>$(x).classList.toggle('hidden',x!==p));populateFilters();if(p==='register')render();if(p==='charts')drawChart();update()}
-function years(){let s=new Set(records.map(r=>r.fy).filter(Boolean)),d=new Date(),y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;s.add(y+'-'+String(y+1).slice(-2));return [...s].sort().reverse()}function populateFilters(){let ys=years(),o='<option value="">All Years</option>'+ys.map(y=>'<option>'+y+'</option>').join('');['dashFY','qfy','chartFY'].forEach(id=>{let v=$(id).value;$(id).innerHTML=o;$(id).value=v});let mo='<option value="">All Months</option>'+months.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');$('dashMonth').innerHTML=mo;$('qmonth').innerHTML=mo;let y=new Date().getFullYear(),yo='';for(let i=y+1;i>=y-10;i--)yo+=`<option>${i}</option>`;$('addYear').innerHTML=yo;$('addYear').value=y;$('addMonth').innerHTML=months.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');$('addMonth').value=String(new Date().getMonth()+1).padStart(2,'0')}
-function filtered(){let fy=$('dashFY').value,m=$('dashMonth').value;return records.filter(r=>(!fy||r.fy===fy)&&(!m||((r.month||'').slice(5,7)===m)))}function update(){let rs=filtered();$('n').textContent=rs.length;$('uans').textContent=rs.reduce((a,r)=>a+(+r.employees||0),0).toLocaleString('en-IN');$('amt').textContent=money(rs.reduce((a,r)=>a+(+r.total||0),0));$('sites').textContent=new Set(rs.map(r=>r.site).filter(Boolean)).size;$('recent').innerHTML=rs.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,8).map(r=>`<div style="padding:8px 0;border-bottom:1px solid #eee"><b>${esc(r.challan)}</b> — ${esc(r.site)} — ${r.month} — ${money(r.total)}</div>`).join('')||'No records.'}function clearDashFilters(){$('dashFY').value='';$('dashMonth').value='';update()}
-['epf','eps','edli','admin'].forEach(x=>$(x).addEventListener('input',()=>{$('total').value=['epf','eps','edli','admin'].reduce((a,k)=>a+(+$(k).value||0),0).toFixed(2)}));function setSelected(){let y=+$('addYear').value,m=+$('addMonth').value;if(y&&m){$('month').value=y+'-'+String(m).padStart(2,'0');$('fy').value=(m>=4?y:y-1)+'-'+String(m>=4?y+1:y).slice(-2)}}$('addYear').onchange=setSelected;$('addMonth').onchange=setSelected;
-$('pdf').onchange=async e=>{let f=e.target.files[0];if(!f)return;$('parseStatus').textContent='Reading PDF...';try{let text=await extractPDF(f),p=parseChallan(text);fillParsed(p);$('parseStatus').innerHTML='<span class="success">PDF read completed. Verify the extracted details before saving.</span>'}catch(err){console.error(err);$('parseStatus').innerHTML='<span class="warning">Could not extract text from this PDF. Enter the details manually. Scanned PDFs may need OCR in a future version.</span>'}};
-async function extractPDF(file){let data=await file.arrayBuffer(),pdf=await window.pdfjsLib.getDocument({data}).promise,all=[];for(let i=1;i<=pdf.numPages;i++){let pg=await pdf.getPage(i),c=await pg.getTextContent();let items=c.items.filter(x=>x.str&&x.str.trim()).map(x=>({str:x.str.trim(),x:x.transform[4],y:x.transform[5]})).sort((a,b)=>Math.abs(a.y-b.y)<2?a.x-b.x:b.y-a.y);let lines=[];for(let it of items){let line=lines.find(l=>Math.abs(l.y-it.y)<2);if(!line){line={y:it.y,items:[]};lines.push(line)}line.items.push(it)}lines.sort((a,b)=>b.y-a.y);all.push(...lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(x=>x.str).join(' ')));}return all.join('\n')}
-function moneyNum(v){return v?String(v).replace(/,/g,'').trim():''}
-function firstMatch(s,patterns){for(let p of patterns){let m=s.match(p);if(m)return moneyNum(m[1])}return''}
-function parseDate(d){let m=d.match(/(\d{1,2})[-\/]([A-Za-z]{3}|\d{1,2})[-\/]((?:20)\d{2})/i);if(!m)return'';let mon=isNaN(m[2])?['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].slice(0,3).toLowerCase())+1:+m[2];return `${m[3]}-${String(mon).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`}
-function parseChallan(t){let s=t.replace(/\r/g,'').replace(/[ \t]+/g,' ').trim(),p={};
- p.challan=firstMatch(s,[/TRRN\s*:\s*(\d{8,20})/i]);
- p.est=firstMatch(s,[/Establishment Code & Name\s*:\s*([A-Z0-9][A-Z0-9\-\/]{5,30})\s+/i]);
- p.employees=firstMatch(s,[/Total Subscribers\s*:\s*(\d{1,8})/i]);
- let wage=s.match(/PROVISIONAL CHALLAN FOR WAGE MONTH\s*:\s*([A-Za-z]{3,9})\s+(20\d{2})/i);if(wage){let mi=months.findIndex(x=>x.toLowerCase().startsWith(wage[1].slice(0,3).toLowerCase()))+1;p.month=`${wage[2]}-${String(mi).padStart(2,'0')}`}
- let gen=s.match(/Generated On\s*:\s*(\d{1,2})-([A-Za-z]{3})-(20\d{2})/i);if(gen)p.date=parseDate(`${gen[1]}-${gen[2]}-${gen[3]}`);
- let row1=s.match(/1\s+Employee's Share Of Contribution\s+([0-9,]+)\s+NA\s+NA\s+NA\s+NA\s+([0-9,]+)/i);
- let row2=s.match(/2\s+Employer's Share Of Contribution\s+([0-9,]+)\s+NA\s+([0-9,]+)\s+([0-9,]+)\s+NA\s+([0-9,]+)/i);
- let row3=s.match(/3\s+Admin\/ Insp\. Charges\s+NA\s+([0-9,]+)\s+NA\s+NA\s+([0-9,]+)\s+([0-9,]+)/i);
- if(row1&&row2){p.epf=String(+moneyNum(row1[1]) + +moneyNum(row2[1]));}
- if(row2)p.eps=moneyNum(row2[2]),p.edli=moneyNum(row2[3]);
- if(row3)p.admin=moneyNum(row3[1]);
- let gt=s.match(/Grand Total\s*:\s*([0-9,]+(?:\.\d{1,2})?)/i);if(gt)p.total=moneyNum(gt[1]);
- return p}
-function fillParsed(p){Object.keys(p).forEach(k=>{if($(k)&&p[k])$(k).value=p[k]});if(p.month){let[y,m]=p.month.split('-');$('addYear').value=y;$('addMonth').value=m;$('month').value=p.month;$('fy').value=(+m>=4?+y:+y-1)+'-'+String(+m>=4?+y+1:+y).slice(-2)}if(p.epf||p.eps||p.edli||p.admin)$('total').value=(+p.epf||0)+(+p.eps||0)+(+p.edli||0)+(+p.admin||0)}(p){Object.keys(p).forEach(k=>{if($(k)&&p[k])$(k).value=p[k]});if(p.month){let[y,m]=p.month.split('-');$('addYear').value=y;$('addMonth').value=m;$('month').value=p.month;$('fy').value=(+m>=4?+y:+y-1)+'-'+String(+m>=4?+y+1:+y).slice(-2)}}
-$('form').onsubmit=async e=>{e.preventDefault();let id=$('id').value||Date.now().toString(),old=records.find(r=>r.id===id),pdf=old?.pdf||'',pdfName=old?.pdfName||'',f=$('pdf').files[0];if(f){pdf=await dataURL(f);pdfName=f.name}let r={id,fy:$('fy').value,month:$('month').value,site:$('site').value,est:$('est').value,challan:$('challan').value,date:$('date').value,employees:$('employees').value,epf:$('epf').value,eps:$('eps').value,edli:$('edli').value,admin:$('admin').value,total:$('total').value,remarks:$('remarks').value,pdf,pdfName};let i=records.findIndex(x=>x.id===id);i>=0?records[i]=r:records.push(r);localStorage.setItem(KEY,JSON.stringify(records));clearForm();page('register')};function dataURL(f){return new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}function clearForm(){$('form').reset();$('id').value='';$('total').value='0';$('title').textContent='Add EPF Challan';$('parseStatus').textContent=''}
-function render(){let q=$('q').value.toLowerCase(),fy=$('qfy').value,m=$('qmonth').value,rs=records.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!fy||r.fy===fy)&&(!m||((r.month||'').slice(5,7)===m)));$('tbl').innerHTML=`<table><tr><th>Month</th><th>Site</th><th>Est. Code</th><th>TRRN</th><th>UAN Count</th><th>Total</th><th>PDF</th><th>Action</th></tr>${rs.map(r=>`<tr><td>${r.month||''}</td><td>${esc(r.site)}</td><td>${esc(r.est)}</td><td>${esc(r.challan)}</td><td>${r.employees||0}</td><td>${money(r.total)}</td><td>${r.pdf?`<button onclick="openPDF('${r.id}')">Open</button>`:'-'}</td><td><button onclick="edit('${r.id}')">Edit</button> <button class="red" onclick="del('${r.id}')">Delete</button></td></tr>`).join('')}</table><p class="small">${rs.length} record(s)</p>`}function edit(id){let r=records.find(x=>x.id===id);page('add');Object.keys(r).forEach(k=>$(k)&&k!=='pdf'&&($(k).value=r[k]||''));$('id').value=r.id;if(r.month){let[y,m]=r.month.split('-');$('addYear').value=y;$('addMonth').value=m}$('title').textContent='Edit EPF Challan'}function del(id){if(confirm('Delete this record?')){records=records.filter(r=>r.id!==id);localStorage.setItem(KEY,JSON.stringify(records));render();update();drawChart()}}function openPDF(id){let r=records.find(x=>x.id===id),w=window.open();w.document.write(`<iframe src="${r.pdf}" style="width:100%;height:100vh;border:0"></iframe>`)}
-function drawChart(){let type=$('chartType').value,fy=$('chartFY').value,rs=records.filter(r=>!fy||r.fy===fy),labels=[],amount=[],uans=[];if(type==='year'){let m={};rs.forEach(r=>{m[r.fy]??={a:0,u:0};m[r.fy].a+=+r.total||0;m[r.fy].u+=+r.employees||0});labels=Object.keys(m).sort();amount=labels.map(x=>m[x].a);uans=labels.map(x=>m[x].u)}else{let m={};months.forEach((x,i)=>m[String(i+1).padStart(2,'0')]={a:0,u:0});rs.forEach(r=>{let k=(r.month||'').slice(5,7);if(m[k]){m[k].a+=+r.total||0;m[k].u+=+r.employees||0}});labels=months;amount=labels.map((x,i)=>m[String(i+1).padStart(2,'0')].a);uans=labels.map((x,i)=>m[String(i+1).padStart(2,'0')].u)}if(chart)chart.destroy();chart=new Chart($('reportChart'),{type:'bar',data:{labels,datasets:[{label:'Total Amount (₹)',data:amount},{label:'UAN / Employee Count',data:uans}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});$('reportSummary').innerHTML=`<h3>${type==='year'?'Yearly':'Monthly'} Summary</h3><table><tr><th>Period</th><th>UAN / Employee Count</th><th>Total Amount</th></tr>${labels.map((x,i)=>`<tr><td>${x}</td><td>${uans[i].toLocaleString('en-IN')}</td><td>${money(amount[i])}</td></tr>`).join('')}</table>`}
-function exportCSV(){let c=['fy','month','site','est','challan','date','employees','epf','eps','edli','admin','total','remarks'],out=[c.join(','),...records.map(r=>c.map(k=>`"${String(r[k]??'').replaceAll('"','""')}"`).join(','))].join('\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download='EPF_Challan_Register.csv';a.click()}function backup(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(records)],{type:'application/json'}));a.download='EPF_Backup.json';a.click()}function restore(e){let r=new FileReader();r.onload=()=>{try{records=JSON.parse(r.result);localStorage.setItem(KEY,JSON.stringify(records));populateFilters();update();alert('Backup restored')}catch{alert('Invalid backup')}};r.readAsText(e.target.files[0])}function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}populateFilters();
-</script></body></html>
+(function(){
+  'use strict';
+  const KEY='epf_challan_register_v5';
+  let records=loadRecords();
+  let editingId=null;
+  let pdfjsPromise=null;
+  const months=['All Months','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const $=id=>document.getElementById(id);
+  const money=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function loadRecords(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+  function saveRecords(){localStorage.setItem(KEY,JSON.stringify(records))}
+  function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),2800)}
+  function fyForDate(d){if(!d)return '';const dt=new Date(d);let y=dt.getFullYear();if(dt.getMonth()<3)y--;return y+'-'+String(y+1).slice(-2)}
+  function fyForYear(y){return y+'-'+String(y+1).slice(-2)}
+  function years(){const ys=new Set();const now=new Date().getFullYear();for(let y=2020;y<=now+1;y++)ys.add(fyForYear(y));records.forEach(r=>r.fy&&ys.add(r.fy));return Array.from(ys).sort().reverse()}
+  function fillSelect(id,items,allLabel){const el=$(id);if(!el)return;el.innerHTML='';if(allLabel!==undefined){const o=document.createElement('option');o.value='';o.textContent=allLabel;el.appendChild(o)}items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)})}
+  function populateFilters(){
+    const ys=years();
+    fillSelect('dashFY',ys,'All Financial Years');fillSelect('regFY',ys,'All Financial Years');fillSelect('chartFY',ys,'All Financial Years');fillSelect('fy',ys,undefined);
+    fillSelect('dashMonth',months,'All Months');fillSelect('regMonth',months,'All Months');fillSelect('month',months.slice(1),undefined);
+    if(!$('dashFY').value)$('dashFY').value=''; if(!$('dashMonth').value)$('dashMonth').value='';
+  }
+  function monthNameFromWage(s){const m=String(s||'').toUpperCase().match(/JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC/);if(!m)return '';const map={JAN:'January',FEB:'February',MAR:'March',APR:'April',MAY:'May',JUN:'June',JUL:'July',AUG:'August',SEP:'September',OCT:'October',NOV:'November',DEC:'December'};return map[m[0]]}
+  function recordMonth(r){return r.month||monthNameFromWage(r.wageMonth)||''}
+  function filterRecords(scope){
+    const fy=$(scope==='dash'?'dashFY':'regFY')?.value||'';const mo=$(scope==='dash'?'dashMonth':'regMonth')?.value||'';const q=($(scope==='dash'?'dashSearch':'regSearch')?.value||'').toLowerCase().trim();
+    return records.filter(r=>(!fy||r.fy===fy)&&(!mo||recordMonth(r)===mo)&&(!q||Object.values(r).some(v=>String(v??'').toLowerCase().includes(q)))).sort((a,b)=>String(b.challanDate||'').localeCompare(String(a.challanDate||'')));
+  }
+  function updateDashboard(){
+    const arr=filterRecords('dash');$('mChallans').textContent=arr.length;$('mUan').textContent=arr.reduce((s,r)=>s+Number(r.subscribers||0),0).toLocaleString('en-IN');$('mAmount').textContent=money(arr.reduce((s,r)=>s+Number(r.grandTotal||0),0));$('mLatest').textContent=arr[0]?.challanDate||'-';$('dashCount').textContent=arr.length+' record(s)';
+    renderTable('dashTable',arr,false);
+  }
+  function renderTable(id,arr,actions){
+    const table=$(id);if(!arr.length){table.innerHTML='<tbody><tr><td class="empty">No records found.</td></tr></tbody>';return}
+    const heads=['Wage Month','TRRN','Establishment','Subscribers','A/C 01','A/C 10','A/C 21','A/C 02','Grand Total','Date'];
+    let h='<thead><tr>'+heads.map(x=>'<th>'+x+'</th>').join('')+(actions?'<th>Actions</th>':'')+'</tr></thead><tbody>';
+    h+=arr.map(r=>'<tr><td>'+esc(r.wageMonth||recordMonth(r))+'</td><td>'+esc(r.trrn)+'</td><td>'+esc(r.estCode)+'</td><td class="num">'+Number(r.subscribers||0).toLocaleString('en-IN')+'</td><td class="num">'+money(r.ac01)+'</td><td class="num">'+money(r.ac10)+'</td><td class="num">'+money(r.ac21)+'</td><td class="num">'+money(r.ac02)+'</td><td class="num"><b>'+money(r.grandTotal)+'</b></td><td>'+esc(r.challanDate)+'</td>'+(actions?'<td><button class="btn btn-light" data-edit="'+r.id+'">Edit</button> <button class="btn btn-danger" data-delete="'+r.id+'">Delete</button></td>':'')+'</tr>').join('');
+    table.innerHTML=h+'</tbody>';
+  }
+  function updateRegister(){renderTable('regTable',filterRecords('reg'),true)}
+  function showPage(name){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===name));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));if(name==='dashboard')updateDashboard();if(name==='register')updateRegister();if(name==='charts')renderCharts()}
+  function resetForm(){editingId=null;$('formTitle').textContent='Add Challan';$('challanForm').reset();$('parseStatus').textContent='PDF reading is loaded only when you select a file.';populateFilters()}
+  function fillForm(r){editingId=r.id;$('formTitle').textContent='Edit Challan';for(const k of ['fy','month','wageMonth','trrn','estCode','challanDate','subscribers','employeeShare','employerShare','ac01','ac10','ac21','ac02','ac22','grandTotal','notes'])if($(k))$(k).value=r[k]??'';showPage('add')}
+  function parseNumber(v){const n=String(v??'').replace(/[,₹\s]/g,'').replace(/[^0-9.]/g,'');return n?Number(n):0}
+  function setVal(id,v){if(v!==undefined&&v!==null&&v!=='')$(id).value=v}
+  async function loadPdfJs(){
+    if(window.pdfjsLib)return window.pdfjsLib;
+    if(!pdfjsPromise){pdfjsPromise=import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs').then(m=>{window.pdfjsLib=m;return m}).catch(e=>{pdfjsPromise=null;throw e})}
+    return pdfjsPromise;
+  }
+  function normalizeText(s){return String(s||'').replace(/\u00a0/g,' ').replace(/[ ]{2,}/g,' ').trim()}
+  function parseEpfoText(text){
+    const raw=text.replace(/\r/g,'');const lines=raw.split('\n').map(normalizeText).filter(Boolean);const joined=lines.join('\n');
+    const out={};
+    let m=joined.match(/TRRN\s*:\s*([0-9]+)/i);if(m)out.trrn=m[1];
+    m=joined.match(/Establishment Code\s*&\s*Name\s*:\s*([A-Z0-9]+)\s+/i);if(m)out.estCode=m[1];
+    m=joined.match(/Total Subscribers\s*:\s*([0-9,]+)/i);if(m)out.subscribers=parseNumber(m[1]);
+    m=joined.match(/PROVISIONAL CHALLAN FOR WAGE MONTH\s*:\s*([^\n]+)/i);if(m){out.wageMonth=normalizeText(m[1]);out.month=monthNameFromWage(out.wageMonth);const y=out.wageMonth.match(/(20\d{2})/);if(y)out.fy=fyForYear(Number(y[1])-(out.month&&['January','February','March'].includes(out.month)?1:0))}
+    m=joined.match(/Generated On\s*:\s*([0-9]{1,2})-([A-Za-z]{3})-(20\d{2})/i);if(m){const map={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};const d=String(m[1]).padStart(2,'0');const mm=map[m[2].toUpperCase()];if(mm!==undefined)out.challanDate=m[3]+'-'+String(mm+1).padStart(2,'0')+'-'+d}
+    const idx=lines.findIndex(x=>/^SL\.\s+PARTICULARS/i.test(x));
+    const dataLines=idx>=0?lines.slice(idx+1,idx+12):lines;
+    function row(re){return dataLines.find(x=>re.test(x))||''}
+    let line=row(/^1\s+Employee's Share Of Contribution/i);let nums=line.match(/(?:NA|[0-9,]+)(?:\s+(?:NA|[0-9,]+)){5}\s+[0-9,]+$/i);if(line){const vals=line.replace(/^1\s+Employee's Share Of Contribution\s*/i,'').match(/NA|[0-9,]+/gi)||[];out.employeeShare=parseNumber(vals[0]);out.ac01Employee=out.employeeShare}
+    line=row(/^2\s+Employer's Share Of Contribution/i);if(line){const vals=line.replace(/^2\s+Employer's Share Of Contribution\s*/i,'').match(/NA|[0-9,]+/gi)||[];out.employerShare=parseNumber(vals[0]);out.ac01Employer=out.employerShare;out.ac10=parseNumber(vals[2]);out.ac21=parseNumber(vals[3])}
+    line=row(/^3\s+Admin\/ Insp\. Charges/i);if(line){const vals=line.replace(/^3\s+Admin\/ Insp\. Charges\s*/i,'').match(/NA|[0-9,]+/gi)||[];out.ac02=parseNumber(vals[1]);out.ac22=parseNumber(vals[4])}
+    m=joined.match(/Grand Total\s*:\s*([0-9,]+)/i);if(m)out.grandTotal=parseNumber(m[1]);
+    if(out.employeeShare||out.employerShare)out.ac01=(out.employeeShare||0)+(out.employerShare||0);
+    if(!out.grandTotal)out.grandTotal=(out.ac01||0)+(out.ac02||0)+(out.ac10||0)+(out.ac21||0)+(out.ac22||0);
+    return out;
+  }
+  async function readPdf(file){
+    const status=$('parseStatus');status.textContent='Loading PDF reader…';
+    const pdfjs=await loadPdfJs();const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf}).promise;let text='';
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);const content=await page.getTextContent();
+      const items=content.items.map(i=>({str:i.str||'',x:(i.transform&&i.transform[4])||0,y:(i.transform&&i.transform[5])||0})).filter(i=>i.str.trim());
+      const groups=[];
+      items.sort((a,b)=>b.y-a.y || a.x-b.x).forEach(item=>{
+        let g=groups.find(g=>Math.abs(g.y-item.y)<2.5);
+        if(!g){g={y:item.y,items:[]};groups.push(g)}
+        g.items.push(item);
+      });
+      groups.sort((a,b)=>b.y-a.y);
+      text+=groups.map(g=>g.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ')).join('\n')+'\n';
+    }
+    return parseEpfoText(text);
+  }
+  function populateFromParsed(d){
+    const fields=['fy','month','wageMonth','trrn','estCode','challanDate','subscribers','employeeShare','employerShare','ac01','ac10','ac21','ac02','ac22','grandTotal'];fields.forEach(k=>setVal(k,d[k]));
+    if(d.ac01===undefined&&d.employeeShare!==undefined&&d.employerShare!==undefined)setVal('ac01',Number(d.employeeShare)+Number(d.employerShare));
+  }
+  $('loginForm').addEventListener('submit',function(e){e.preventDefault();if($('username').value.trim()==='admin'&&$('password').value==='admin123'){$('loginError').textContent='';$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');sessionStorage.setItem('epf_logged_in','1');populateFilters();updateDashboard()}else $('loginError').textContent='Invalid username or password.'});
+  $('logoutBtn').addEventListener('click',()=>{sessionStorage.removeItem('epf_logged_in');$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('password').value=''});
+  document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+  ['dashFY','dashMonth','dashSearch'].forEach(id=>$(id).addEventListener('input',updateDashboard));
+  ['regFY','regMonth','regSearch'].forEach(id=>$(id).addEventListener('input',updateRegister));
+  $('clearDash').addEventListener('click',()=>{$('dashFY').value='';$('dashMonth').value='';$('dashSearch').value='';updateDashboard()});
+  $('cancelEdit').addEventListener('click',()=>{resetForm();showPage('dashboard')});
+  $('pdfFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const d=await readPdf(file);populateFromParsed(d);$('parseStatus').textContent='EPFO fields read. Please review the values before saving.';toast('PDF details loaded. Please verify before saving.')}catch(err){console.error(err);$('parseStatus').textContent='Could not read this PDF automatically. You can enter the fields manually.';toast('PDF reader could not load. Manual entry is still available.')}});
+  $('challanForm').addEventListener('submit',async e=>{e.preventDefault();const r={id:editingId||String(Date.now()),fy:$('fy').value,month:$('month').value,wageMonth:$('wageMonth').value.trim(),trrn:$('trrn').value.trim(),estCode:$('estCode').value.trim(),challanDate:$('challanDate').value,subscribers:parseNumber($('subscribers').value),employeeShare:parseNumber($('employeeShare').value),employerShare:parseNumber($('employerShare').value),ac01:parseNumber($('ac01').value),ac10:parseNumber($('ac10').value),ac21:parseNumber($('ac21').value),ac02:parseNumber($('ac02').value),ac22:parseNumber($('ac22').value),grandTotal:parseNumber($('grandTotal').value),notes:$('notes').value.trim()};if(!r.ac01)r.ac01=r.employeeShare+r.employerShare;if(!r.grandTotal)r.grandTotal=r.ac01+r.ac10+r.ac21+r.ac02+r.ac22;const old=records.findIndex(x=>x.id===r.id);if(old>=0)records[old]=r;else records.push(r);saveRecords();resetForm();populateFilters();showPage('dashboard');toast(old>=0?'Challan updated':'Challan saved')});
+  $('regTable').addEventListener('click',e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const r=records.find(x=>x.id===edit.dataset.edit);if(r)fillForm(r)}if(del){const r=records.find(x=>x.id===del.dataset.delete);if(r&&confirm('Delete this challan record?')){records=records.filter(x=>x.id!==r.id);saveRecords();populateFilters();updateRegister();updateDashboard();toast('Record deleted')}}});
+  function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+  $('exportCsv').addEventListener('click',()=>{const arr=filterRecords('reg');const heads=['Financial Year','Month','Wage Month','TRRN','Establishment Code','Challan Date','Subscribers','Employee Share','Employer Share','A/C 01','A/C 10','A/C 21','A/C 02','A/C 22','Grand Total','Notes'];const rows=[heads,...arr.map(r=>heads.map(h=>csvCell(r[{ 'Financial Year':'fy','Month':'month','Wage Month':'wageMonth','TRRN':'trrn','Establishment Code':'estCode','Challan Date':'challanDate','Subscribers':'subscribers','Employee Share':'employeeShare','Employer Share':'employerShare','A/C 01':'ac01','A/C 10':'ac10','A/C 21':'ac21','A/C 02':'ac02','A/C 22':'ac22','Grand Total':'grandTotal','Notes':'notes'}[h]])))];const blob=new Blob([rows.map(x=>x.join(',')).join('\n')],{type:'text/csv;charset=utf-8'});downloadBlob(blob,'EPF_Challan_Register.csv')});
+  function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+  $('backupBtn').addEventListener('click',()=>downloadBlob(new Blob([JSON.stringify(records,null,2)],{type:'application/json'}),'EPF_Challan_Backup.json'));
+  $('restoreFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data))throw new Error('Invalid');if(confirm('Replace current register with this backup?')){records=data;saveRecords();populateFilters();updateDashboard();toast('Backup restored')}}catch(err){toast('Invalid backup file')}});
+  function renderCharts(){const mode=$('chartMode').value;const fy=$('chartFY').value;const arr=records.filter(r=>!fy||r.fy===fy);const map=new Map();if(mode==='yearly'){arr.forEach(r=>{const k=r.fy||'Unknown';const x=map.get(k)||{count:0,amount:0};x.count+=Number(r.subscribers||0);x.amount+=Number(r.grandTotal||0);map.set(k,x)});$('chartTitle').textContent='Yearly Summary'}else{months.slice(1).forEach(m=>map.set(m,{count:0,amount:0}));arr.forEach(r=>{const k=recordMonth(r);if(!map.has(k))map.set(k,{count:0,amount:0});const x=map.get(k);x.count+=Number(r.subscribers||0);x.amount+=Number(r.grandTotal||0)});$('chartTitle').textContent='Monthly Summary'+(fy?' – '+fy:'')}const entries=Array.from(map.entries()).filter(([k])=>k&&k!=='Unknown');const max=Math.max(1,...entries.map(x=>x[1].count));$('bars').innerHTML=entries.length?entries.map(([k,x])=>'<div class="bar-group"><div class="bar-amount">'+money(x.amount)+'</div><div class="bar" title="'+esc(k)+': '+x.count.toLocaleString('en-IN')+' subscribers, '+money(x.amount)+'"></div><div class="bar-label">'+esc(k)+'</div><div style="font-size:10px">'+x.count.toLocaleString('en-IN')+'</div></div>').join(''):'<div class="empty">No chart data available.</div>';entries.forEach(([k,x],i)=>{const el=$('bars').children[i]?.querySelector('.bar');if(el)el.style.height=Math.max(2,Math.round(250*x.count/max))+'px'})}
+  $('chartMode').addEventListener('change',renderCharts);$('chartFY').addEventListener('change',renderCharts);$('printCharts').addEventListener('click',()=>window.print());
+  function boot(){populateFilters();if(sessionStorage.getItem('epf_logged_in')==='1'){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');updateDashboard()}}
+  boot();
+})();
+</script>
+</body>
+</html>
